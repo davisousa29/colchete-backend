@@ -48,6 +48,7 @@ RUN composer install --no-scripts --no-interaction --no-dev --prefer-dist
 
 COPY . .
 RUN composer dump-autoload --optimize --classmap-authoritative \
+    && php artisan package:discover --ansi \
     && chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 
