@@ -3,11 +3,12 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Database\Seeders\Concerns\SyncsReferenceData;
 
 class IngredientesSeeder extends Seeder
 {
+    use SyncsReferenceData;
     public function run(): void
     {
         $ingredientes = [
@@ -44,35 +45,32 @@ class IngredientesSeeder extends Seeder
         ];
 
         foreach ($ingredientes as $ing) {
-            DB::table('ingredientes')->insert([
-                'id'          => Str::uuid(),
-                'nome'        => $ing['nome'],
-                'tipo'        => $ing['tipo'],
-                'grupo'       => $ing['grupo'],
-                'fonte'       => 'Embrapa / CQBAL 3.0',
-                'ms_pct'      => $ing['ms_pct'],
-                'ndt_pct'     => $ing['ndt_pct'],
-                'pb_pct'      => $ing['pb_pct'],
-                'pdr_pct'     => $ing['pdr_pct'],
-                'pndr_pct'    => $ing['pndr_pct'],
-                'fdn_pct'     => $ing['fdn_pct'],
-                'fda_pct'     => 0,
-                'ee_pct'      => $ing['ee_pct'],
-                'ca_pct'      => $ing['ca_pct'],
-                'p_pct'       => $ing['p_pct'],
-                'mg_pct'      => 0,
-                'k_pct'       => 0,
-                'na_pct'      => 0,
-                's_pct'       => 0,
-                'elm_mcal'    => $ing['elm_mcal'],
-                'elg_mcal'    => $ing['elg_mcal'],
-                'ed_mcal'     => 0,
-                'em_mcal'     => 0,
-                'preco_kg'    => null,
-                'ativo'       => true,
-                'created_at'  => now(),
-                'updated_at'  => now(),
-            ]);
+            $this->sync('ingredientes',
+                ['nome' => $ing['nome'], 'fonte' => 'Embrapa / CQBAL 3.0'],
+                [
+                    'tipo'     => $ing['tipo'],
+                    'grupo'    => $ing['grupo'],
+                    'ms_pct'   => $ing['ms_pct'],
+                    'ndt_pct'  => $ing['ndt_pct'],
+                    'pb_pct'   => $ing['pb_pct'],
+                    'pdr_pct'  => $ing['pdr_pct'],
+                    'pndr_pct' => $ing['pndr_pct'],
+                    'fdn_pct'  => $ing['fdn_pct'],
+                    'fda_pct'  => 0,
+                    'ee_pct'   => $ing['ee_pct'],
+                    'ca_pct'   => $ing['ca_pct'],
+                    'p_pct'    => $ing['p_pct'],
+                    'mg_pct'   => 0,
+                    'k_pct'    => 0,
+                    'na_pct'   => 0,
+                    's_pct'    => 0,
+                    'elm_mcal' => $ing['elm_mcal'],
+                    'elg_mcal' => $ing['elg_mcal'],
+                    'ed_mcal'  => 0,
+                    'em_mcal'  => 0,
+                ],
+                ['preco_kg' => null, 'ativo' => true],
+            );
         }
     }
 }

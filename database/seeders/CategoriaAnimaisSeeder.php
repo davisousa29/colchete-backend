@@ -3,11 +3,13 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Database\Seeders\Concerns\SyncsReferenceData;
 
 class CategoriaAnimaisSeeder extends Seeder
 {
+    use SyncsReferenceData;
+
     public function run(): void
     {
         $bovino  = DB::table('especies')->where('nome', 'Bovino')->first();
@@ -64,17 +66,11 @@ class CategoriaAnimaisSeeder extends Seeder
         ];
 
         foreach ($categorias as $categoria) {
-            DB::table('categorias_animais')->insert([
-                'id'         => Str::uuid(),
-                'especie_id' => $categoria['especie_id'],
-                'nome'       => $categoria['nome'],
-                'sexo'       => $categoria['sexo'],
-                'castrado'   => $categoria['castrado'],
-                'fase'       => $categoria['fase'],
-                'ativo'      => true,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            $this->sync('categorias_animais',
+                ['especie_id' => $categoria['especie_id'], 'nome' => $categoria['nome']],
+                ['sexo' => $categoria['sexo'], 'castrado' => $categoria['castrado'], 'fase' => $categoria['fase']],
+                ['ativo' => true],
+            );
         }
     }
 }

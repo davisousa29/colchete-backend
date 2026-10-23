@@ -3,11 +3,13 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Database\Seeders\Concerns\SyncsReferenceData;
 
 class RacasSeeder extends Seeder
 {
+    use SyncsReferenceData;
+
     public function run(): void
     {
         $bovino = DB::table('especies')->where('nome', 'Bovino')->first();
@@ -60,16 +62,11 @@ class RacasSeeder extends Seeder
         ];
 
         foreach ($racas as $raca) {
-            DB::table('racas')->insert([
-                'id'         => Str::uuid(),
-                'especie_id' => $raca['especie_id'],
-                'nome'       => $raca['nome'],
-                'grupo'      => $raca['grupo'],
-                'aptidao'    => $raca['aptidao'],
-                'ativo'      => true,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            $this->sync('racas',
+                ['especie_id' => $raca['especie_id'], 'nome' => $raca['nome']],
+                ['grupo' => $raca['grupo'], 'aptidao' => $raca['aptidao']],
+                ['ativo' => true],
+            );
         }
     }
 }

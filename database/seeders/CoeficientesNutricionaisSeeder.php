@@ -3,11 +3,13 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Database\Seeders\Concerns\SyncsReferenceData;
 
 class CoeficientesNutricionaisSeeder extends Seeder
 {
+    use SyncsReferenceData;
+
     public function run(): void
     {
         $bovino = DB::table('especies')->where('nome', 'Bovino')->first();
@@ -228,7 +230,9 @@ class CoeficientesNutricionaisSeeder extends Seeder
             }
         }
 
-        DB::table('coeficientes_nutricionais')->insert($coefs);
+        foreach ($coefs as $coef) {
+            $this->sync('coeficientes_nutricionais', $coef['keys'], $coef['values'], ['ativo' => true]);
+        }
     }
 
     private function m(
@@ -238,23 +242,24 @@ class CoeficientesNutricionaisSeeder extends Seeder
         string $var, string $obs = ''
     ): array {
         return [
-            'id'            => Str::uuid(),
-            'especie_id'    => $eId,
-            'raca_id'       => $rId,
-            'categoria_id'  => $cId,
-            'sistema_id'    => $sId,
-            'nutriente'     => $nutriente,
-            'unidade'       => $unidade,
-            'formula_tipo'  => $tipo,
-            'referencia'    => $ref,
-            'coef_a'        => $a,
-            'coef_b'        => $b,
-            'coef_c'        => $c,
-            'variavel_base' => $var,
-            'observacao'    => $obs,
-            'ativo'         => true,
-            'created_at'    => now(),
-            'updated_at'    => now(),
+            // Um coeficiente é único por espécie + raça + categoria + sistema + nutriente
+            'keys' => [
+                'especie_id'   => $eId,
+                'raca_id'      => $rId,
+                'categoria_id' => $cId,
+                'sistema_id'   => $sId,
+                'nutriente'    => $nutriente,
+            ],
+            'values' => [
+                'unidade'       => $unidade,
+                'formula_tipo'  => $tipo,
+                'referencia'    => $ref,
+                'coef_a'        => $a,
+                'coef_b'        => $b,
+                'coef_c'        => $c,
+                'variavel_base' => $var,
+                'observacao'    => $obs,
+            ],
         ];
     }
 }

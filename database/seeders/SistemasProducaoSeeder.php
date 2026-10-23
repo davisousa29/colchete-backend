@@ -3,11 +3,13 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Database\Seeders\Concerns\SyncsReferenceData;
 
 class SistemasProducaoSeeder extends Seeder
 {
+    use SyncsReferenceData;
+
     public function run(): void
     {
         $bovino  = DB::table('especies')->where('nome', 'Bovino')->first();
@@ -107,15 +109,11 @@ class SistemasProducaoSeeder extends Seeder
         ];
 
         foreach ($sistemas as $sistema) {
-            DB::table('sistemas_producao')->insert([
-                'id'          => Str::uuid(),
-                'especie_id'  => $sistema['especie_id'],
-                'nome'        => $sistema['nome'],
-                'descricao'   => $sistema['descricao'],
-                'ativo'       => true,
-                'created_at'  => now(),
-                'updated_at'  => now(),
-            ]);
+            $this->sync('sistemas_producao',
+                ['especie_id' => $sistema['especie_id'], 'nome' => $sistema['nome']],
+                ['descricao' => $sistema['descricao']],
+                ['ativo' => true],
+            );
         }
     }
 }
