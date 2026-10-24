@@ -5,6 +5,7 @@ namespace App\Services\Payment;
 use App\Models\User;
 use App\Support\Document;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Http\Client\Response;
 
 class AsaasGateway implements PaymentGateway
 {
@@ -28,7 +29,35 @@ class AsaasGateway implements PaymentGateway
         ])->baseUrl($this->baseUrl);
     }
 
-    public function createCustomer(User $user): string
+    public function syncCustomer(User $user, ?string $customerId): string
+    {
+        if ($customerId) {
+            $response = $this->sendCustomer('put', "/customers/{$customerId}", $user);
+
+            if ($response->successful()) {
+                return $customerId;
+            }
+
+            // 404 = o cliente foi removido no painel do Asaas: cria um novo abaixo
+            if ($response->status() !== 404) {
+                throw new \Exception('Erro ao atualizar cliente no Asaas: ' . $response->body());
+            }
+        }
+
+        $response = $this->sendCustomer('post', '/customers', $user);
+
+        if (!$response->successful()) {
+            throw new \Exception('Erro ao criar cliente no Asaas: ' . $response->body());
+        }
+
+        return $response->json('id');
+    }
+
+    /**
+     * Envia os dados do cliente (criação ou atualização). Se o Asaas recusar o celular,
+     * tenta de novo sem ele: o celular é opcional para cobrar.
+     */
+    private function sendCustomer(string $method, string $url, User $user): Response
     {
         $payload = [
             'name'    => $user->name,
@@ -41,7 +70,7 @@ class AsaasGateway implements PaymentGateway
             $payload['mobilePhone'] = $phone;
         }
 
-        $response = $this->client()->post('/customers', $payload);
+        $response = $this->client()->{$method}($url, $payload);
 
         if (
             !$response->successful()
@@ -49,14 +78,10 @@ class AsaasGateway implements PaymentGateway
             && collect($response->json('errors', []))->contains('code', 'invalid_mobilePhone')
         ) {
             unset($payload['mobilePhone']);
-            $response = $this->client()->post('/customers', $payload);
+            $response = $this->client()->{$method}($url, $payload);
         }
 
-        if (!$response->successful()) {
-            throw new \Exception('Erro ao criar cliente no Asaas: ' . $response->body());
-        }
-
-        return $response->json('id');
+        return $response;
     }
 
     public function createPayment(array $data): array

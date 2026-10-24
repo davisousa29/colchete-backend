@@ -2,10 +2,12 @@
 
 namespace App\Services\Payment;
 
+use App\Exceptions\CheckoutException;
 use App\Models\Payment;
 use App\Models\Plan;
 use App\Models\User;
 use App\Services\SubscriptionService;
+use App\Support\Document;
 use Illuminate\Support\Facades\DB;
 
 class CheckoutService
@@ -18,6 +20,7 @@ class CheckoutService
     /**
      * Cria uma cobrança PIX para o plano escolhido e registra em `payments`.
      * Se já existir uma cobrança PIX pendente e não vencida do mesmo plano, reaproveita.
+     * Não exige assinatura prévia: o registro de assinatura nasce na ativação.
      */
     public function createPixCharge(User $user, string $planSlug): Payment
     {
@@ -39,20 +42,21 @@ class CheckoutService
             return $pending;
         }
 
-        $subscription = $user->subscription;
-
-        if (!$subscription) {
-            throw new \RuntimeException('Usuário sem assinatura cadastrada.');
+        // O Asaas exige CPF para cobrar: avisa a pessoa antes de chamar a API
+        if (!Document::isValidCpf($user->cpf)) {
+            throw new CheckoutException('Para pagar, complete seu cadastro com um CPF válido.');
         }
 
-        // Cria o cliente no Asaas só na primeira cobrança
-        if (!$subscription->gateway_customer_id) {
-            $subscription->gateway_customer_id = $this->gateway->createCustomer($user);
-            $subscription->save();
+        // Cria ou atualiza o cliente no Asaas: nome, e-mail, CPF e celular sempre em dia
+        $customerId = $this->gateway->syncCustomer($user, $user->gateway_customer_id);
+
+        if ($customerId !== $user->gateway_customer_id) {
+            $user->gateway_customer_id = $customerId;
+            $user->save();
         }
 
         $charge = $this->gateway->createPayment([
-            'customer_id'        => $subscription->gateway_customer_id,
+            'customer_id'        => $customerId,
             'value'              => (float) $plan->price,
             'due_date'           => now()->addDay()->toDateString(),
             'description'        => "Assinatura Colchete — plano {$plan->name}",
@@ -101,6 +105,7 @@ class CheckoutService
                 'paid_at' => now(),
             ]);
 
+            // Cria a assinatura se a pessoa ainda não tinha uma
             $this->subscriptions->activate(
                 $payment->user,
                 $payment->plan,

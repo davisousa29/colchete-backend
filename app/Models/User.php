@@ -31,6 +31,7 @@ class User extends Authenticatable implements JWTSubject
         'remember_token',
         'configuracao2fa',
         'subscription',
+        'gateway_customer_id',
     ];
 
     protected function casts(): array

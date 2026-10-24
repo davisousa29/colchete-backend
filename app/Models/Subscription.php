@@ -21,7 +21,6 @@ class Subscription extends Model
         'blocked_at',
         'grace_ends_at',
         'is_subscriber',
-        'gateway_customer_id',
         'gateway_subscription_id',
         'data_purged_at',
     ];

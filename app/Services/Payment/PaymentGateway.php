@@ -7,15 +7,11 @@ use App\Models\User;
 interface PaymentGateway
 {
     /**
-     * Cria (ou recupera) o cliente no gateway e retorna o ID dele lá.
+     * Garante o cliente no gateway com os dados atuais do usuário:
+     * cria se $customerId for null (ou se ele não existir mais lá) e atualiza se existir.
+     * Retorna o ID do cliente no gateway.
      */
-    public function createCustomer(User $user): string;
-
-    /**
-     * Cria uma cobrança única (ex: PIX de um plano semestral/anual).
-     * Retorna os dados da cobrança (id, link/qrcode do pix, status).
-     */
-    public function createPayment(array $data): array;
+    public function syncCustomer(User $user, ?string $customerId): string;
 
     /**
      * Busca o QR Code PIX de uma cobrança já criada.

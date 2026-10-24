@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use App\Exceptions\CheckoutException;
 
 class CheckoutController extends Controller
 {
@@ -57,6 +58,8 @@ class CheckoutController extends Controller
 
         try {
             $payment = $this->checkout->createPixCharge($user, $request->plan);
+        } catch (CheckoutException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
         } catch (\Throwable $e) {
             Log::error('Erro ao gerar cobrança no checkout', [
                 'user_id' => $user->id,
