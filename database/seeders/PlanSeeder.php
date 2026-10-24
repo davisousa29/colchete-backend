@@ -9,7 +9,9 @@ class PlanSeeder extends Seeder
 {
     public function run(): void
     {
-        // TODO: valores provisórios — ajustar após o estudo de preços
+        // Cria os planos apenas se ainda não existirem (firstOrCreate).
+        // NÃO altera planos existentes: para mudar preço, dias ou nome em
+        // qualquer ambiente, use `php artisan plans:update`.
         $plans = [
             ['slug' => 'monthly',    'name' => 'Mensal',    'price' => 19.90,  'days' => 30,  'sort_order' => 1],
             ['slug' => 'semiannual', 'name' => 'Semestral', 'price' => 99.90,  'days' => 180, 'sort_order' => 2],

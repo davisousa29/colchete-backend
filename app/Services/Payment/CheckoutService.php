@@ -30,10 +30,14 @@ class CheckoutService
             throw new \InvalidArgumentException("Plano inválido: {$planSlug}");
         }
 
+        // Só reaproveita se a cobrança ainda bate com o plano atual:
+        // se o preço ou os dias mudaram, gera uma nova com os valores de hoje
         $pending = Payment::where('user_id', $user->id)
             ->where('plan', $plan->slug)
             ->where('payment_method', 'pix')
             ->where('status', 'pending')
+            ->where('value', $plan->price)
+            ->where('days', $plan->days)
             ->whereDate('due_date', '>=', today())
             ->latest()
             ->first();
