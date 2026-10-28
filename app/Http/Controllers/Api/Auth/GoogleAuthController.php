@@ -50,13 +50,16 @@ class GoogleAuthController extends Controller
                 if (!$user->avatar_url && $avatar) {
                     $user->avatar_url = $avatar;
                 }
+                if (!$user->email_verified_at) {
+                    $user->email_verified_at = now();
+                }
                 $user->save();
             }
         }
 
         // ── 3. Não achou de jeito nenhum — cria cadastro prévio ────────────────
         if (!$user) {
-            $user = User::create([
+            $user = new User([
                 'name'          => $nome,
                 'email'         => $email,
                 'username'      => null,
@@ -65,8 +68,9 @@ class GoogleAuthController extends Controller
                 'google_id'     => $googleId,
                 'auth_provider' => 'google',
                 'avatar_url'    => $avatar,
-                'active'        => true,
             ]);
+            $user->email_verified_at = now();
+            $user->save();
         }
 
         // ── Gera o token JWT do nosso sistema ──────────────────────────────────

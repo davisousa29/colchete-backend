@@ -5,6 +5,7 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Http\Request;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -29,5 +30,17 @@ class AppServiceProvider extends ServiceProvider
             config('services.mail_queue.limit'),
             config('services.mail_queue.seconds'),
         ));
+
+        RateLimiter::for('cadastro', fn (Request $request) =>
+        Limit::perHour(10)->by($request->ip())
+        );
+
+        RateLimiter::for('cadastro-confirmar', fn (Request $request) =>
+        Limit::perMinutes(10, 10)->by($request->ip())
+        );
+
+        RateLimiter::for('cadastro-reenviar', fn (Request $request) =>
+        Limit::perMinutes(10, 5)->by($request->ip())
+        );
     }
 }

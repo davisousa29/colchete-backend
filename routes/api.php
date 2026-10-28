@@ -18,11 +18,14 @@ use App\Http\Controllers\Api\Subscription\SubscriptionController;
 use App\Http\Controllers\Api\Subscription\CheckoutController;
 use App\Http\Controllers\Api\Webhook\AsaasWebhookController;
 use App\Http\Controllers\Api\Termo\TermoController;
+use App\Http\Controllers\Api\Auth\CadastroController;
 use Illuminate\Support\Facades\Route;
 
 // ── Rotas públicas ────────────────────────────────────
 Route::prefix('auth')->group(function () {
-    Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:3,60');
+    Route::post('/register',           [CadastroController::class, 'iniciar'])->middleware('throttle:cadastro');
+    Route::post('/register/confirmar', [CadastroController::class, 'confirmar'])->middleware('throttle:cadastro-confirmar');
+    Route::post('/register/reenviar',  [CadastroController::class, 'reenviar'])->middleware('throttle:cadastro-reenviar');
     Route::post('/login',    [AuthController::class, 'login'])->middleware('throttle:5,2');
     Route::post('/refresh', [AuthController::class, 'refresh'])->middleware('throttle:20,1');
 

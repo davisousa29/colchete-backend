@@ -24,6 +24,7 @@ class User extends Authenticatable implements JWTSubject
         'google_id',
         'auth_provider',
         'avatar_url',
+        'data_nascimento',
     ];
 
     protected $hidden = [
@@ -40,6 +41,7 @@ class User extends Authenticatable implements JWTSubject
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'active' => 'boolean',
+            'data_nascimento' => 'date:Y-m-d',
         ];
     }
 
