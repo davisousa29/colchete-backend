@@ -84,4 +84,9 @@ class User extends Authenticatable implements JWTSubject
     {
         return $this->hasOne(Subscription::class, 'user_id');
     }
+
+    public function aceitesTermos()
+    {
+        return $this->hasMany(AceiteTermo::class, 'user_id');
+    }
 }

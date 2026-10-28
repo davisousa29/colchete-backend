@@ -19,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Alias do middleware de verificação de assinatura
         $middleware->alias([
             'subscription.active' => \App\Http\Middleware\EnsureSubscriptionActive::class,
+            'termos.aceitos' => \App\Http\Middleware\EnsureTermsAccepted::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
