@@ -22,32 +22,35 @@ use App\Http\Controllers\Api\Auth\CadastroController;
 use App\Http\Controllers\Api\Conta\ContaController;
 use Illuminate\Support\Facades\Route;
 
+// Limites de tentativas (throttle:<nome>): definidos no AppServiceProvider,
+// cada um com o próprio contador
+
 // ── Rotas públicas ────────────────────────────────────
 Route::prefix('auth')->group(function () {
     Route::post('/register',           [CadastroController::class, 'iniciar'])->middleware('throttle:cadastro');
     Route::post('/register/confirmar', [CadastroController::class, 'confirmar'])->middleware('throttle:cadastro-confirmar');
     Route::post('/register/reenviar',  [CadastroController::class, 'reenviar'])->middleware('throttle:cadastro-reenviar');
-    Route::post('/login',    [AuthController::class, 'login'])->middleware('throttle:5,2');
-    Route::post('/refresh', [AuthController::class, 'refresh'])->middleware('throttle:20,1');
+    Route::post('/login',    [AuthController::class, 'login'])->middleware('throttle:login');
+    Route::post('/refresh', [AuthController::class, 'refresh'])->middleware('throttle:refresh');
 
     // Login com Google
-    Route::post('/google', [GoogleAuthController::class, 'login'])->middleware('throttle:10,1');
+    Route::post('/google', [GoogleAuthController::class, 'login'])->middleware('throttle:login-google');
 
     // Recuperação de senha
-    Route::post('/recuperar-senha', [RecuperacaoSenhaController::class, 'solicitar'])->middleware('throttle:5,2');
-    Route::post('/redefinir-senha', [RecuperacaoSenhaController::class, 'redefinir'])->middleware('throttle:5,2');
+    Route::post('/recuperar-senha', [RecuperacaoSenhaController::class, 'solicitar'])->middleware('throttle:recuperar-senha');
+    Route::post('/redefinir-senha', [RecuperacaoSenhaController::class, 'redefinir'])->middleware('throttle:redefinir-senha');
 });
 
 // ── Webhooks (público — autenticado pelo token no header) ──────────────
 Route::post('/webhooks/asaas', [AsaasWebhookController::class, 'handle']);
 
 // ── Termos vigentes (público — usado no modal do cadastro) ─────────────
-Route::get('/termos', [TermoController::class, 'vigentes'])->middleware('throttle:60,1');
+Route::get('/termos', [TermoController::class, 'vigentes'])->middleware('throttle:termos');
 
 // ── 2FA no login ─────────────────────
 Route::prefix('2fa')->group(function () {
-    Route::post('/login/enviar-email', [DoisFatoresController::class, 'enviarCodigoEmail'])->middleware('throttle:5,2');
-    Route::post('/login/verificar',    [DoisFatoresController::class, 'verificarLogin'])->middleware('throttle:10,2');
+    Route::post('/login/enviar-email', [DoisFatoresController::class, 'enviarCodigoEmail'])->middleware('throttle:2fa-enviar-email');
+    Route::post('/login/verificar',    [DoisFatoresController::class, 'verificarLogin'])->middleware('throttle:2fa-verificar');
 });
 
 // ── Rotas protegidas — token JWT ───────────────────────────
@@ -58,13 +61,13 @@ Route::middleware('auth:api')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
     });
 
+    // Conta: fora dos bloqueios de termos e de assinatura (exigência das lojas)
     Route::delete('/conta', [ContaController::class, 'destroy'])->middleware('throttle:exclusao-conta');
-
     Route::put('/conta/senha', [ContaController::class, 'alterarSenha'])->middleware('throttle:alteracao-senha');
 
     Route::prefix('termos')->group(function () {
         Route::get('/pendentes', [TermoController::class, 'pendentes']);
-        Route::post('/aceitar',  [TermoController::class, 'aceitar'])->middleware('throttle:10,1');
+        Route::post('/aceitar',  [TermoController::class, 'aceitar'])->middleware('throttle:termos-aceitar');
     });
 
     Route::middleware('termos.aceitos')->group(function () {
@@ -72,7 +75,7 @@ Route::middleware('auth:api')->group(function () {
         Route::prefix('subscription')->group(function () {
             Route::get('/status', [SubscriptionController::class, 'status']);
             Route::get('/plans',          [CheckoutController::class, 'plans']);
-            Route::post('/checkout',      [CheckoutController::class, 'store'])->middleware('throttle:10,1');
+            Route::post('/checkout',      [CheckoutController::class, 'store'])->middleware('throttle:checkout');
             Route::get('/checkout/{id}',  [CheckoutController::class, 'show'])->whereUuid('id');
         });
 
@@ -154,15 +157,15 @@ Route::middleware('auth:api')->group(function () {
                 Route::patch('/todas/lidas', [NotificacaoController::class, 'marcarTodasLidas']);
             });
 
-            Route::prefix('2fa')->group(function () {
+            Route::prefix('2fa')->middleware('throttle:2fa-configurar')->group(function () {
                 Route::get('/status',     [DoisFatoresController::class, 'status']);
                 Route::post('/gerar',     [DoisFatoresController::class, 'gerar']);
                 Route::post('/confirmar', [DoisFatoresController::class, 'confirmar']);
                 Route::post('/desativar', [DoisFatoresController::class, 'desativar']);
             });
 
-        });
+        }); // fim do subscription.active
 
-    });
+    }); // fim do termos.aceitos
 
-});
+}); // fim do auth:api
