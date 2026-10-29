@@ -138,12 +138,18 @@ class RecuperacaoSenhaController extends Controller
             ], 422);
         }
 
-        // Tudo certo — redefine a senha
         $user = User::where('email', $email)->first();
 
         if (!$user) {
             return response()->json([
                 'message' => 'Não foi possível redefinir a senha.',
+            ], 422);
+        }
+
+        if ($user->password && Hash::check($request->password, $user->password)) {
+            return response()->json([
+                'message' => 'A nova senha deve ser diferente da senha atual.',
+                'errors'  => ['password' => ['A nova senha deve ser diferente da senha atual.']],
             ], 422);
         }
 

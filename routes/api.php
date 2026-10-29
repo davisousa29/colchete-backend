@@ -60,6 +60,8 @@ Route::middleware('auth:api')->group(function () {
 
     Route::delete('/conta', [ContaController::class, 'destroy'])->middleware('throttle:exclusao-conta');
 
+    Route::put('/conta/senha', [ContaController::class, 'alterarSenha'])->middleware('throttle:alteracao-senha');
+
     Route::prefix('termos')->group(function () {
         Route::get('/pendentes', [TermoController::class, 'pendentes']);
         Route::post('/aceitar',  [TermoController::class, 'aceitar'])->middleware('throttle:10,1');

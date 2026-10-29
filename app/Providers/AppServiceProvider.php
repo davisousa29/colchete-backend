@@ -46,5 +46,9 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('exclusao-conta', fn (Request $request) =>
         Limit::perMinutes(10, 5)->by($request->user()?->id ?: $request->ip())
         );
+
+        RateLimiter::for('alteracao-senha', fn (Request $request) =>
+        Limit::perMinutes(10, 5)->by($request->user()?->id ?: $request->ip())
+        );
     }
 }
