@@ -96,6 +96,11 @@ class CheckoutService
                 return 'not_found';
             }
 
+            // Conta excluída: o pagamento foi anonimizado e não há quem ativar
+            if (!$payment->user_id) {
+                return 'account_deleted';
+            }
+
             if ($payment->status === 'received') {
                 return 'already_processed';
             }

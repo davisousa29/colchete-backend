@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\Subscription\CheckoutController;
 use App\Http\Controllers\Api\Webhook\AsaasWebhookController;
 use App\Http\Controllers\Api\Termo\TermoController;
 use App\Http\Controllers\Api\Auth\CadastroController;
+use App\Http\Controllers\Api\Conta\ContaController;
 use Illuminate\Support\Facades\Route;
 
 // ── Rotas públicas ────────────────────────────────────
@@ -56,6 +57,8 @@ Route::middleware('auth:api')->group(function () {
         Route::get('/me',      [AuthController::class, 'me']);
         Route::post('/logout', [AuthController::class, 'logout']);
     });
+
+    Route::delete('/conta', [ContaController::class, 'destroy'])->middleware('throttle:exclusao-conta');
 
     Route::prefix('termos')->group(function () {
         Route::get('/pendentes', [TermoController::class, 'pendentes']);

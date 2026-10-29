@@ -42,5 +42,9 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('cadastro-reenviar', fn (Request $request) =>
         Limit::perMinutes(10, 5)->by($request->ip())
         );
+
+        RateLimiter::for('exclusao-conta', fn (Request $request) =>
+        Limit::perMinutes(10, 5)->by($request->user()?->id ?: $request->ip())
+        );
     }
 }

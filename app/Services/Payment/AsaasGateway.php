@@ -110,6 +110,18 @@ class AsaasGateway implements PaymentGateway
         ];
     }
 
+    public function cancelPayment(string $gatewayPaymentId): void
+    {
+        $response = $this->client()->delete("/payments/{$gatewayPaymentId}");
+
+        // 404 = a cobrança já não existe no Asaas: o objetivo (não poder ser paga) já está cumprido
+        if ($response->successful() || $response->status() === 404) {
+            return;
+        }
+
+        throw new \Exception('Erro ao cancelar cobrança no Asaas: ' . $response->body());
+    }
+
     /**
      * Busca o QR Code PIX de uma cobrança já criada.
      * (O Asaas leva alguns segundos para gerar o QR após criar a cobrança,

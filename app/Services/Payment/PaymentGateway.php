@@ -14,6 +14,18 @@ interface PaymentGateway
     public function syncCustomer(User $user, ?string $customerId): string;
 
     /**
+     * Cria uma cobrança avulsa (hoje, PIX).
+     * Retorna gateway_payment_id, status, value, due_date e invoice_url.
+     */
+    public function createPayment(array $data): array;
+
+    /**
+     * Cancela uma cobrança ainda não paga. Cobrança que já não existe no gateway
+     * conta como cancelada. Lança exceção se o gateway recusar.
+     */
+    public function cancelPayment(string $gatewayPaymentId): void;
+
+    /**
      * Busca o QR Code PIX de uma cobrança já criada.
      */
     public function getPixQrCode(string $gatewayPaymentId): array;
