@@ -21,3 +21,5 @@ Schedule::command('model:prune')
     ->timezone('America/Sao_Paulo')
     ->withoutOverlapping()
     ->onOneServer();
+
+Schedule::command('payments:conciliar')->everyFifteenMinutes()->withoutOverlapping();

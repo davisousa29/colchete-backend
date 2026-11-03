@@ -80,6 +80,9 @@ class CheckoutController extends Controller
     {
         $payment = Payment::where('user_id', auth()->id())->findOrFail($id);
 
+        // Webhook atrasado ou perdido: confere direto no gateway (no máximo a cada 10s)
+        $payment = $this->checkout->syncPending($payment);
+
         return response()->json([
             'payment' => $this->present($payment, $request->boolean('pix')),
         ]);

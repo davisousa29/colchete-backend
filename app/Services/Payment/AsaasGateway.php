@@ -122,6 +122,29 @@ class AsaasGateway implements PaymentGateway
         throw new \Exception('Erro ao cancelar cobrança no Asaas: ' . $response->body());
     }
 
+    public function getPaymentStatus(string $gatewayPaymentId): string
+    {
+        $response = $this->client()->get("/payments/{$gatewayPaymentId}");
+
+        // 404 ou removida no painel: não pode mais ser paga
+        if ($response->status() === 404 || $response->json('deleted') === true) {
+            return 'canceled';
+        }
+
+        if (!$response->successful()) {
+            throw new \Exception('Erro ao consultar cobrança no Asaas: ' . $response->body());
+        }
+
+        // Status do Asaas → nosso vocabulário. PIX pago chega como RECEIVED;
+        // CONFIRMED é o equivalente do cartão.
+        return match ($response->json('status')) {
+            'RECEIVED', 'CONFIRMED', 'RECEIVED_IN_CASH'               => 'received',
+            'OVERDUE'                                                 => 'overdue',
+            'REFUNDED', 'REFUND_REQUESTED', 'REFUND_IN_PROGRESS'      => 'refunded',
+            default                                                   => 'pending',
+        };
+    }
+
     /**
      * Busca o QR Code PIX de uma cobrança já criada.
      * (O Asaas leva alguns segundos para gerar o QR após criar a cobrança,

@@ -26,6 +26,13 @@ interface PaymentGateway
     public function cancelPayment(string $gatewayPaymentId): void;
 
     /**
+     * Consulta a situação atual de uma cobrança no gateway, já traduzida para o
+     * vocabulário de `payments.status`: pending, received, overdue, refunded ou canceled.
+     * Cobrança que não existe mais no gateway conta como canceled.
+     */
+    public function getPaymentStatus(string $gatewayPaymentId): string;
+
+    /**
      * Busca o QR Code PIX de uma cobrança já criada.
      */
     public function getPixQrCode(string $gatewayPaymentId): array;

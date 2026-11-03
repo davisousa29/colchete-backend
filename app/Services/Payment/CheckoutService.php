@@ -8,6 +8,8 @@ use App\Models\Plan;
 use App\Models\User;
 use App\Services\SubscriptionService;
 use App\Support\Document;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 
 class CheckoutService
@@ -43,7 +45,8 @@ class CheckoutService
             ->first();
 
         if ($pending) {
-            return $pending;
+            // Pode já ter sido paga sem o webhook chegar: confere antes de reaproveitar
+            return $this->syncPending($pending);
         }
 
         // O Asaas exige CPF para cobrar: avisa a pessoa antes de chamar a API
@@ -124,5 +127,49 @@ class CheckoutService
 
             return 'activated';
         });
+    }
+
+    /**
+     * Conciliação: confere no gateway uma cobrança que ainda está pendente aqui e,
+     * se ela já foi paga, confirma pelo mesmo caminho do webhook (confirmPayment).
+     *
+     * É a rede de segurança para webhooks que se perdem. Falha ao consultar o gateway
+     * nunca quebra quem chamou: a cobrança volta como estava e a próxima consulta tenta de novo.
+     *
+     * $forcar = ignora o intervalo mínimo (usado pelo comando agendado).
+     */
+    public function syncPending(Payment $payment, bool $forcar = false): Payment
+    {
+        if ($payment->status !== 'pending' || !$payment->gateway_payment_id || !$payment->user_id) {
+            return $payment;
+        }
+
+        // O site pergunta a cada 4s: no máximo uma consulta ao gateway a cada 10s por cobrança.
+        // Cache::add só grava se a chave não existe, e devolve false se já existir.
+        if (!$forcar && !Cache::add("payment-sync:{$payment->id}", true, 10)) {
+            return $payment;
+        }
+
+        try {
+            $status = $this->gateway->getPaymentStatus($payment->gateway_payment_id);
+        } catch (\Throwable $e) {
+            Log::warning('Falha ao conciliar cobrança com o gateway', [
+                'payment_id' => $payment->id,
+                'erro'       => $e->getMessage(),
+            ]);
+
+            return $payment;
+        }
+
+        if ($status === 'received') {
+            $resultado = $this->confirmPayment($payment->gateway_payment_id, null);
+
+            Log::info('Pagamento confirmado pela conciliação', [
+                'payment_id' => $payment->id,
+                'resultado'  => $resultado,
+            ]);
+        }
+
+        return $payment->fresh();
     }
 }
