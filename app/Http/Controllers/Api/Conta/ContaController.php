@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api\Conta;
 
 use App\Exceptions\ExclusaoContaException;
 use App\Http\Controllers\Controller;
-use App\Mail\SubscriptionNoticeMail;
+use App\Mail\AvisoMail;
 use App\Models\User;
 use App\Services\ExclusaoContaService;
 use Illuminate\Http\Request;
@@ -113,12 +113,14 @@ class ContaController extends Controller
     private function avisarAlteracaoDeSenha(User $user): void
     {
         try {
-            Mail::to($user->email)->send(new SubscriptionNoticeMail(
-                $user->name,
-                'Sua senha do Colchete foi alterada',
-                'A senha da sua conta acabou de ser alterada pelo aplicativo. '
-                . 'Se não foi você, use "Esqueci minha senha" na tela de login para recuperar o acesso '
-                . 'e responda este e-mail.',
+            Mail::to($user->email)->send(new AvisoMail(
+                nome: $user->name,
+                titulo: 'Sua senha do Colchete foi alterada',
+                mensagem: 'A senha da sua conta acabou de ser alterada. '
+                    . 'Se não foi você, recupere o acesso agora com "Esqueci minha senha" '
+                    . 'e escreva para ' . config('colchete.email_suporte') . '.',
+                botaoTexto: 'Recuperar o acesso',
+                botaoUrl: config('colchete.web_url') . '/auth/recuperar-senha',
             ));
         } catch (\Throwable $e) {
             // A senha já foi trocada: a falha do e-mail não desfaz nada

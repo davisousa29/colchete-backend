@@ -2,7 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Mail\SubscriptionNoticeMail;
+use App\Mail\AvisoMail;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\Middleware\RateLimited;
@@ -11,6 +11,9 @@ use Illuminate\Support\Facades\Mail;
 /**
  * Envia o e-mail de um aviso de assinatura pela fila.
  * Recebe só textos (e não o model), para o e-mail sair igual ao que foi registrado.
+ *
+ * O nome da classe e os parâmetros do construtor ficam como estão: jobs já
+ * gravados na fila (antes de um deploy) continuam sendo processados normalmente.
  */
 class SendSubscriptionNoticeEmail implements ShouldQueue
 {
@@ -46,6 +49,14 @@ class SendSubscriptionNoticeEmail implements ShouldQueue
 
     public function handle(): void
     {
-        Mail::to($this->email)->send(new SubscriptionNoticeMail($this->nome, $this->titulo, $this->mensagem));
+        Mail::to($this->email)->send(new AvisoMail(
+            nome: $this->nome,
+            titulo: $this->titulo,
+            mensagem: $this->mensagem,
+            // A assinatura é gerenciada no site (o app não tem mais pagamento)
+            botaoTexto: 'Acessar minha conta',
+            botaoUrl: config('colchete.web_url') . '/assinatura',
+            observacao: 'Se você já renovou sua assinatura, desconsidere este email.',
+        ));
     }
 }

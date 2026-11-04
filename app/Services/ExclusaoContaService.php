@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Exceptions\ExclusaoContaException;
-use App\Mail\SubscriptionNoticeMail;
+use App\Mail\AvisoMail;
 use App\Models\CadastroPendente;
 use App\Models\CodigoRecuperacao;
 use App\Models\Payment;
@@ -33,7 +33,7 @@ class ExclusaoContaService
     {
         if (!$user->password) {
             throw new ExclusaoContaException(
-                'Esta conta foi criada com o Google e não tem senha. Para excluí-la, escreva para colchete.gestaodefazendas@gmail.com.'
+                'Esta conta foi criada com o Google e não tem senha. Para excluí-la, escreva para ' . config('colchete.email_suporte') . '.'
             );
         }
 
@@ -98,11 +98,11 @@ class ExclusaoContaService
     private function confirmarPorEmail(string $email, string $nome): void
     {
         try {
-            Mail::to($email)->send(new SubscriptionNoticeMail(
-                $nome,
-                'Sua conta no Colchete foi excluída',
-                'Confirmamos a exclusão da sua conta e de todos os seus dados de trabalho. '
-                . 'Se você não pediu esta exclusão, responda este e-mail.',
+            Mail::to($email)->send(new AvisoMail(
+                nome: $nome,
+                titulo: 'Sua conta no Colchete foi excluída',
+                mensagem: 'Confirmamos a exclusão da sua conta e de todos os seus dados de trabalho. '
+                    . 'Se você não pediu esta exclusão, escreva para ' . config('colchete.email_suporte') . '.',
             ));
         } catch (\Throwable $e) {
             // A conta já foi excluída: a falha do e-mail não desfaz nada
