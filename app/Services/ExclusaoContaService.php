@@ -29,6 +29,9 @@ class ExclusaoContaService
 
     public function __construct(private PaymentGateway $gateway) {}
 
+    /**
+     * Exclusão pedida pelo próprio usuário, confirmada com a senha (tela "Excluir conta").
+     */
     public function excluir(User $user, string $senha): void
     {
         if (!$user->password) {
@@ -41,6 +44,17 @@ class ExclusaoContaService
             throw new ExclusaoContaException('Senha incorreta.');
         }
 
+        $this->apagar($user, 'usuario');
+    }
+
+    /**
+     * Apaga a conta e os dados, sem pedir senha. Uso administrativo apenas:
+     * comando `contas:excluir` (pedidos ao suporte, contas sem senha, limpeza de testes).
+     *
+     * $origem só identifica quem pediu, no log: 'usuario' ou 'admin'.
+     */
+    public function apagar(User $user, string $origem = 'admin', bool $avisarPorEmail = true): void
+    {
         // Antes de apagar: nenhuma cobrança pode continuar pagável
         $this->cancelarCobrancasEmAberto($user);
 
@@ -64,9 +78,11 @@ class ExclusaoContaService
             $user->delete();
         });
 
-        Log::info('Conta excluída pelo próprio usuário', ['user_id' => $userId]);
+        Log::info('Conta excluída', ['user_id' => $userId, 'origem' => $origem]);
 
-        $this->confirmarPorEmail($email, $nome);
+        if ($avisarPorEmail) {
+            $this->confirmarPorEmail($email, $nome);
+        }
     }
 
     private function cancelarCobrancasEmAberto(User $user): void
