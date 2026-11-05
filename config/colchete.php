@@ -8,6 +8,6 @@ return [
     'web_url' => rtrim(env('WEB_URL', 'https://consultor.colcheteapp.com.br'), '/'),
 
     // Contato de suporte mostrado aos usuários (e-mails, telas)
-    'email_suporte' => env('EMAIL_SUPORTE', 'colchete.gestaodefazendas@gmail.com'),
+    'email_suporte' => env('EMAIL_SUPORTE', 'colchete.gestaorural@gmail.com'),
 
 ];

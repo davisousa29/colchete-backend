@@ -2,7 +2,7 @@ Estes Termos de Uso regulam o uso do aplicativo **Colchete - Consultor** ("Colch
 
 ## 1. Quem somos
 
-O Colchete é desenvolvido e mantido por **Davi Ramos de Sousa**, pessoa física, com domicílio em Goiânia - GO ("nós"). Para qualquer dúvida sobre estes termos, fale conosco pelo e-mail **colchete.gestaodefazendas@gmail.com**.
+O Colchete é desenvolvido e mantido por **Davi Ramos de Sousa**, pessoa física, com domicílio em Goiânia - GO ("nós"). Para qualquer dúvida sobre estes termos, fale conosco pelo e-mail **colchete.gestaorural@gmail.com**.
 
 ## 2. O que o Colchete oferece
 

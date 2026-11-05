@@ -4,7 +4,7 @@ Esta Política de Privacidade explica quais dados pessoais o aplicativo **Colche
 
 O controlador dos dados pessoais é **Davi Ramos de Sousa**, pessoa física, com domicílio em Goiânia - GO, que também atua como encarregado pelo tratamento de dados.
 
-Para dúvidas ou para exercer seus direitos, escreva para **colchete.gestaodefazendas@gmail.com**.
+Para dúvidas ou para exercer seus direitos, escreva para **colchete.gestaorural@gmail.com**.
 
 ## 2. Dados que coletamos
 
