@@ -111,6 +111,7 @@ Route::middleware('auth:api')->group(function () {
             Route::prefix('racao')->group(function () {
 
                 Route::post('/exigencias', [ExigenciaController::class, 'calcular']);
+                Route::post('/calcular',   [RacaoController::class, 'calcular']);
 
                 Route::get('/ingredientes',              [IngredienteController::class, 'index']);
                 Route::post('/ingredientes',             [IngredienteController::class, 'store']);

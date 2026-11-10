@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ProgramaRacao;
 use App\Models\RacaoIngrediente;
 use App\Models\Ingrediente;
+use App\Services\Racao\CalculadoraFormulacao;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
@@ -113,22 +114,14 @@ class RacaoController extends Controller
         ], 201);
     }
 
-    // ── Adiciona ou atualiza ingredientes do programa ─────────────────────────
-
-    public function salvarIngredientes(Request $request, $id)
+    // ── Calcula a formulação sem salvar (prévia da tela final do app) ─────────
+    public function calcular(Request $request, CalculadoraFormulacao $calculadora)
     {
-        $user = auth()->user();
-
-        $programa = ProgramaRacao::where('criado_por', $user->id)
-            ->findOrFail($id);
-
         $validator = Validator::make($request->all(), [
-            'ingredientes'                  => 'required|array|min:1',
-            'ingredientes.*.ingrediente_id' => 'required|uuid|exists:ingredientes,id',
-            'ingredientes.*.tipo'           => 'required|in:volumoso_principal,volumoso_suplementar,concentrado',
-            'ingredientes.*.proporcao_pct'  => 'required|numeric|min:0|max:100',
-            'ingredientes.*.preco_kg_local' => 'nullable|numeric|min:0',
+            'exig_cms_kg' => 'required|numeric|gt:0',
+            ...$this->regrasIngredientes(),
         ]);
+        $this->validarSomaProporcoes($validator);
 
         if ($validator->fails()) {
             return response()->json([
@@ -137,61 +130,52 @@ class RacaoController extends Controller
             ], 422);
         }
 
-        DB::transaction(function () use ($request, $programa) {
+        $calculo = $calculadora->calcular(
+            (float) $request->exig_cms_kg,
+            $this->montarItens($request->ingredientes),
+        );
+
+        return response()->json($calculo);
+    }
+
+    // ── Adiciona ou atualiza ingredientes do programa ─────────────────────────
+
+    public function salvarIngredientes(Request $request, $id, CalculadoraFormulacao $calculadora)
+    {
+        $user = auth()->user();
+
+        $programa = ProgramaRacao::where('criado_por', $user->id)
+            ->findOrFail($id);
+
+        $validator = Validator::make($request->all(), $this->regrasIngredientes());
+        $this->validarSomaProporcoes($validator);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Dados inválidos.',
+                'errors'  => $validator->errors(),
+            ], 422);
+        }
+
+        $calculo = $calculadora->calcular(
+            (float) ($programa->exig_cms_kg ?? 0),
+            $this->montarItens($request->ingredientes),
+        );
+
+        DB::transaction(function () use ($programa, $calculo) {
             // Remove ingredientes anteriores
             RacaoIngrediente::where('programa_id', $programa->id)->delete();
 
-            $custoTotalDia = 0;
-            $ordem = 1;
-
-            foreach ($request->ingredientes as $item) {
-                $ingrediente = Ingrediente::findOrFail($item['ingrediente_id']);
-                $proporcao   = (float) $item['proporcao_pct'];
-                $precoKg     = $item['preco_kg_local'] ?? $ingrediente->preco_kg ?? 0;
-
-                // Consumo matéria natural = CMS do programa / MS% × proporção
-                $cms         = (float) ($programa->exig_cms_kg ?? 0);
-                $consumoMS   = $cms * ($proporcao / 100);
-                $consumoMN   = $ingrediente->ms_pct > 0
-                    ? $consumoMS / ($ingrediente->ms_pct / 100)
-                    : 0;
-
-                // Contribuições nutricionais
-                $contribNDT  = $consumoMS * ($ingrediente->ndt_pct / 100);
-                $contribPB   = $consumoMS * ($ingrediente->pb_pct / 100) * 1000;
-                $contribPDR  = $contribPB * ($ingrediente->pdr_pct / 100);
-                $contribELm  = $consumoMS * $ingrediente->elm_mcal;
-                $contribELg  = $consumoMS * $ingrediente->elg_mcal;
-                $contribCa   = $consumoMS * ($ingrediente->ca_pct / 100) * 1000;
-                $contribP    = $consumoMS * ($ingrediente->p_pct / 100) * 1000;
-
-                // Custo
-                $custoAnimalDia = $consumoMN * $precoKg;
-                $custoTotalDia += $custoAnimalDia;
-
+            foreach ($calculo['itens'] as $ordem => $linha) {
                 RacaoIngrediente::create([
-                    'programa_id'       => $programa->id,
-                    'ingrediente_id'    => $ingrediente->id,
-                    'tipo'              => $item['tipo'],
-                    'ordem'             => $ordem++,
-                    'proporcao_pct'     => $proporcao,
-                    'preco_kg_local'    => $precoKg,
-                    'consumo_mn_kg'     => round($consumoMN, 4),
-                    'consumo_ms_kg'     => round($consumoMS, 4),
-                    'contrib_ndt_kg'    => round($contribNDT, 4),
-                    'contrib_pb_g'      => round($contribPB, 2),
-                    'contrib_pdr_g'     => round($contribPDR, 2),
-                    'contrib_elm_mcal'  => round($contribELm, 4),
-                    'contrib_elg_mcal'  => round($contribELg, 4),
-                    'contrib_ca_g'      => round($contribCa, 2),
-                    'contrib_p_g'       => round($contribP, 2),
-                    'custo_animal_dia'  => round($custoAnimalDia, 4),
+                    'programa_id' => $programa->id,
+                    'ordem'       => $ordem + 1,
+                    ...collect($linha)->except(['nome', 'ms_pct'])->all(),
                 ]);
             }
 
-            // Atualiza custo total no programa
             $programa->update([
-                'custo_animal_dia' => round($custoTotalDia, 4),
+                'custo_animal_dia' => $calculo['totais']['custo_animal_dia'],
                 'status'           => 'ativo',
             ]);
         });
@@ -200,6 +184,52 @@ class RacaoController extends Controller
             'message'  => 'Ingredientes salvos com sucesso.',
             'programa' => $programa->fresh()->load(['ingredientes.ingrediente']),
         ]);
+    }
+
+    /** Regras dos ingredientes, iguais na prévia e no salvamento. */
+    private function regrasIngredientes(): array
+    {
+        return [
+            'ingredientes'                  => 'required|array|min:1',
+            'ingredientes.*.ingrediente_id' => 'required|uuid|distinct|exists:ingredientes,id',
+            'ingredientes.*.tipo'           => 'required|in:volumoso_principal,volumoso_suplementar,concentrado',
+            'ingredientes.*.proporcao_pct'  => 'required|numeric|min:0|max:100',
+            'ingredientes.*.preco_kg_local' => 'nullable|numeric|min:0',
+        ];
+    }
+
+    /** A soma das proporções precisa fechar 100% (tolerância de arredondamento). */
+    private function validarSomaProporcoes(\Illuminate\Validation\Validator $validator): void
+    {
+        $validator->after(function ($v) {
+            $ingredientes = $v->getData()['ingredientes'] ?? null;
+            if (!is_array($ingredientes) || $v->errors()->has('ingredientes*')) {
+                return;
+            }
+
+            $soma = collect($ingredientes)->sum(fn ($i) => (float) ($i['proporcao_pct'] ?? 0));
+            if (abs($soma - 100) > 0.01) {
+                $v->errors()->add('ingredientes', 'A soma das proporções deve ser 100%. Atual: ' . number_format($soma, 2, ',', '.') . '%.');
+            }
+        });
+    }
+
+    /**
+     * Junta cada item da requisição ao seu ingrediente do banco (uma única consulta),
+     * mantendo a ordem enviada pelo app.
+     */
+    private function montarItens(array $ingredientes): array
+    {
+        $doBanco = Ingrediente::whereIn('id', collect($ingredientes)->pluck('ingrediente_id'))
+            ->get()
+            ->keyBy('id');
+
+        return collect($ingredientes)->map(fn ($item) => [
+            'ingrediente'    => $doBanco[$item['ingrediente_id']],
+            'tipo'           => $item['tipo'],
+            'proporcao_pct'  => $item['proporcao_pct'],
+            'preco_kg_local' => $item['preco_kg_local'] ?? null,
+        ])->all();
     }
 
     // ── Encerra um programa ───────────────────────────────────────────────────
