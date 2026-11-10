@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\Auth\GoogleAuthController;
 use App\Http\Controllers\Api\Auth\DoisFatoresController;
 use App\Http\Controllers\Api\Subscription\SubscriptionController;
 use App\Http\Controllers\Api\Subscription\CheckoutController;
+use App\Http\Controllers\Api\Suporte\SuporteController;
 use App\Http\Controllers\Api\Webhook\AsaasWebhookController;
 use App\Http\Controllers\Api\Termo\TermoController;
 use App\Http\Controllers\Api\Auth\CadastroController;
@@ -43,6 +44,9 @@ Route::prefix('auth')->group(function () {
 
 // ── Webhooks (público — autenticado pelo token no header) ──────────────
 Route::post('/webhooks/asaas', [AsaasWebhookController::class, 'handle']);
+
+// ── Suporte ao usuário ──────────────
+Route::get('/suporte', [SuporteController::class, 'contato'])->middleware('throttle:60,1');
 
 // ── Termos vigentes (público — usado no modal do cadastro) ─────────────
 Route::get('/termos', [TermoController::class, 'vigentes'])->middleware('throttle:termos');
