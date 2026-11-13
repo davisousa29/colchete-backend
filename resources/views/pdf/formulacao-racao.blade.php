@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>{{ $programa->nome }}</title>
     <style>
+        * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial, sans-serif; font-size: 12px; color: #1a1a1a; padding: 32px; background: #fff; }
         .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid #2D6A4F; }
@@ -24,11 +25,10 @@
         table { width: 100%; border-collapse: collapse; margin-top: 8px; }
         thead tr { background: #2D6A4F; color: white; }
         thead th { padding: 8px 10px; text-align: left; font-size: 11px; }
-        thead th:last-child, thead th:nth-child(3), thead th:nth-child(4) { text-align: right; }
         tbody tr:nth-child(even) { background: #f9f9f9; }
         tbody td { padding: 7px 10px; font-size: 11px; border-bottom: 1px solid #efefef; }
-        tbody td:last-child, tbody td:nth-child(3), tbody td:nth-child(4) { text-align: right; }
         tfoot tr { background: #F0FAF5; font-weight: bold; }
+        th.num, td.num { text-align: right; }
         tfoot td { padding: 8px 10px; font-size: 12px; border-top: 2px solid #2D6A4F; }
         tfoot td:last-child { text-align: right; color: #2D6A4F; font-size: 14px; }
         .balanco-item { margin-bottom: 12px; }
@@ -56,10 +56,15 @@
         <div class="header-subtitulo">Formulação de Ração — BR-CORTE 2016</div>
     </div>
     <div class="header-data">
-        Emitido em: {{ now()->format('d/m/Y H:i') }}<br>
+        Emitido em: {{ now(config('colchete.fuso_horario'))->format('d/m/Y H:i') }}<br>
         Responsável: {{ $programa->criador->name ?? '—' }}
     </div>
 </div>
+
+@php
+    $porcento = fn ($valor) => rtrim(rtrim(number_format((float) $valor, 2, ',', '.'), '0'), ',');
+    $kg = fn ($valor, $casas = 2) => number_format((float) $valor, $casas, ',', '.');
+@endphp
 
 <div class="nome">{{ $programa->nome }}</div>
 
@@ -72,7 +77,7 @@
             <div class="resumo-card-label">animais</div>
         </div>
         <div class="resumo-card">
-            <div class="resumo-card-valor">{{ number_format($programa->exig_cms_kg, 2, ',', '.') }}</div>
+            <div class="resumo-card-valor">{{ $kg($programa->exig_cms_kg) }}</div>
             <div class="resumo-card-label">kg MS/animal/dia</div>
         </div>
         <div class="resumo-card">
@@ -94,9 +99,15 @@
         <div class="info-item"><span class="info-label">Raça</span><span class="info-valor">{{ $programa->raca->nome }}</span></div>
         <div class="info-item"><span class="info-label">Categoria</span><span class="info-valor">{{ $programa->categoria->nome }}</span></div>
         <div class="info-item"><span class="info-label">Sistema</span><span class="info-valor">{{ $programa->sistema->nome }}</span></div>
-        <div class="info-item"><span class="info-label">Peso inicial</span><span class="info-valor">{{ $programa->peso_inicial_kg }} kg</span></div>
-        <div class="info-item"><span class="info-label">Peso final</span><span class="info-valor">{{ $programa->peso_final_kg }} kg</span></div>
-        <div class="info-item"><span class="info-label">GMD desejado</span><span class="info-valor">{{ $programa->gmd_kg }} kg/dia</span></div>
+        <div class="info-item"><span class="info-label">Peso inicial</span><span class="info-valor">{{ $kg($programa->peso_inicial_kg) }} kg</span></div>
+        <div class="info-item"><span class="info-label">Peso final</span><span class="info-valor">{{ $kg($programa->peso_final_kg) }} kg</span></div>
+        <div class="info-item"><span class="info-label">GMD desejado</span><span class="info-valor">{{ $kg($programa->gmd_kg) }} kg/dia</span></div>
+        @if($indicadores['dias_ate_peso'])
+            <div class="info-item"><span class="info-label">Dias até o peso final</span><span class="info-valor">{{ $indicadores['dias_ate_peso'] }} dias (previsto)</span></div>
+        @endif
+        @if($indicadores['conversao_alimentar'])
+            <div class="info-item"><span class="info-label">Conversão alimentar</span><span class="info-valor">{{ $kg($indicadores['conversao_alimentar']) }} kg MS por kg de ganho</span></div>
+        @endif
         <div class="info-item"><span class="info-label">Referência</span><span class="info-valor">{{ $programa->referencia_nutricional }}</span></div>
     </div>
 </div>
@@ -105,12 +116,15 @@
 <div class="secao">
     <div class="secao-titulo">Exigências nutricionais</div>
     <div class="info-grid">
-        <div class="info-item"><span class="info-label">CMS</span><span class="info-valor">{{ $programa->exig_cms_kg }} kg/dia</span></div>
-        <div class="info-item"><span class="info-label">ELm</span><span class="info-valor">{{ $programa->exig_elm_mcal }} Mcal/dia</span></div>
-        <div class="info-item"><span class="info-label">ELg</span><span class="info-valor">{{ $programa->exig_elg_mcal }} Mcal/dia</span></div>
-        <div class="info-item"><span class="info-label">PB</span><span class="info-valor">{{ $programa->exig_pb_g }} g/dia</span></div>
-        <div class="info-item"><span class="info-label">Ca</span><span class="info-valor">{{ $programa->exig_ca_g }} g/dia</span></div>
-        <div class="info-item"><span class="info-label">P</span><span class="info-valor">{{ $programa->exig_p_g }} g/dia</span></div>
+        <div class="info-item"><span class="info-label">CMS</span><span class="info-valor">{{ $kg($programa->exig_cms_kg, 3) }} kg/dia</span></div>
+        @if((float) $programa->exig_ndt_kg > 0)
+            <div class="info-item"><span class="info-label">NDT</span><span class="info-valor">{{ $kg($programa->exig_ndt_kg, 3) }} kg/dia</span></div>
+        @endif
+        <div class="info-item"><span class="info-label">ELm</span><span class="info-valor">{{ $kg($programa->exig_elm_mcal, 3) }} Mcal/dia</span></div>
+        <div class="info-item"><span class="info-label">ELg</span><span class="info-valor">{{ $kg($programa->exig_elg_mcal, 3) }} Mcal/dia</span></div>
+        <div class="info-item"><span class="info-label">PB</span><span class="info-valor">{{ $kg($programa->exig_pb_g) }} g/dia</span></div>
+        <div class="info-item"><span class="info-label">Ca</span><span class="info-valor">{{ $kg($programa->exig_ca_g) }} g/dia</span></div>
+        <div class="info-item"><span class="info-label">P</span><span class="info-valor">{{ $kg($programa->exig_p_g) }} g/dia</span></div>
     </div>
 </div>
 
@@ -123,10 +137,10 @@
             <tr>
                 <th>Ingrediente</th>
                 <th>Tipo</th>
-                <th>Proporção</th>
-                <th>Consumo MS (kg/dia)</th>
-                <th>Consumo MN (kg/dia)</th>
-                <th>Custo/dia</th>
+                <th class="num">Proporção</th>
+                <th class="num">Consumo MS (kg/dia)</th>
+                <th class="num">Consumo MN (kg/dia)</th>
+                <th class="num">Custo/dia</th>
             </tr>
             </thead>
             <tbody>
@@ -134,17 +148,54 @@
                 <tr>
                     <td>{{ $ing->ingrediente->nome }}</td>
                     <td>{{ str_replace('_', ' ', $ing->tipo) }}</td>
-                    <td>{{ number_format($ing->proporcao_pct, 0) }}%</td>
-                    <td>{{ number_format($ing->consumo_ms_kg, 3, ',', '.') }}</td>
-                    <td>{{ number_format($ing->consumo_mn_kg, 3, ',', '.') }}</td>
-                    <td>R$ {{ number_format($ing->custo_animal_dia, 2, ',', '.') }}</td>
+                    <td class="num">{{ $porcento($ing->proporcao_pct) }}%</td>
+                    <td class="num">{{ number_format($ing->consumo_ms_kg, 3, ',', '.') }}</td>
+                    <td class="num">{{ number_format($ing->consumo_mn_kg, 3, ',', '.') }}</td>
+                    <td class="num">R$ {{ number_format($ing->custo_animal_dia, 2, ',', '.') }}</td>
                 </tr>
             @endforeach
             </tbody>
             <tfoot>
             <tr>
-                <td colspan="5">Total</td>
-                <td>R$ {{ number_format($programa->custo_animal_dia, 2, ',', '.') }}</td>
+                <td colspan="2">Total (por animal/dia)</td>
+                <td class="num">{{ $porcento($indicadores['totais']['proporcao_pct']) }}%</td>
+                <td class="num">{{ $kg($indicadores['totais']['consumo_ms_kg'], 3) }}</td>
+                <td class="num">{{ $kg($indicadores['totais']['consumo_mn_kg'], 3) }}</td>
+                <td class="num">R$ {{ $kg($indicadores['totais']['custo_animal_dia']) }}</td>
+            </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    {{-- Concentrado × volumoso --}}
+    <div class="secao">
+        <div class="secao-titulo">
+            Concentrado × volumoso
+            ({{ $programa->quantidade_animais > 1 ? 'por dia no lote de ' . $programa->quantidade_animais . ' animais' : 'por dia, por animal' }})
+        </div>
+        <table>
+            <thead>
+            <tr>
+                <th>Grupo</th>
+                <th class="num">kg/dia (MN)</th>
+                <th class="num">kg/dia (MS)</th>
+                <th class="num">% da dieta (MS)</th>
+            </tr>
+            </thead>
+            <tbody>
+            @foreach(['concentrado' => 'Concentrado', 'volumoso' => 'Volumoso'] as $chave => $nomeGrupo)
+                <tr>
+                    <td>{{ $nomeGrupo }}</td>
+                    <td class="num">{{ $kg($indicadores['grupos'][$chave]['mn_kg'], 1) }}</td>
+                    <td class="num">{{ $kg($indicadores['grupos'][$chave]['ms_kg'], 1) }}</td>
+                    <td class="num">{{ $porcento($indicadores['grupos'][$chave]['pct']) }}%</td>
+                </tr>
+            @endforeach
+            </tbody>
+            <tfoot>
+            <tr>
+                <td colspan="3">Relação volumoso : concentrado</td>
+                <td class="num">{{ round($indicadores['grupos']['volumoso']['pct']) }} : {{ round($indicadores['grupos']['concentrado']['pct']) }}</td>
             </tr>
             </tfoot>
         </table>
@@ -154,53 +205,25 @@
     <div class="secao">
         <div class="secao-titulo">Balanço nutricional</div>
         @php
-            $fornELm = $programa->ingredientes->sum('contrib_elm_mcal');
-            $fornPB  = $programa->ingredientes->sum('contrib_pb_g');
-            $fornCa  = $programa->ingredientes->sum('contrib_ca_g');
-            $fornP   = $programa->ingredientes->sum('contrib_p_g');
-
-            function statusBalanco($forn, $exig) {
-                if ($exig <= 0) return 'ok';
-                $pct = ($forn / $exig) * 100;
-                if ($pct >= 95 && $pct <= 115) return 'ok';
-                return $pct < 95 ? 'baixo' : 'alto';
-            }
-
-            function corBalanco($status) {
-                return match($status) {
-                    'ok'    => '#2D6A4F',
-                    'baixo' => '#FA5252',
-                    'alto'  => '#FAB005',
-                    default => '#999',
-                };
-            }
-
-            $itens = [
-                ['label' => 'Energia Líquida Mantença', 'forn' => $fornELm, 'exig' => $programa->exig_elm_mcal, 'unidade' => 'Mcal'],
-                ['label' => 'Proteína Bruta',            'forn' => $fornPB,  'exig' => $programa->exig_pb_g,    'unidade' => 'g'],
-                ['label' => 'Cálcio',                    'forn' => $fornCa,  'exig' => $programa->exig_ca_g,    'unidade' => 'g'],
-                ['label' => 'Fósforo',                   'forn' => $fornP,   'exig' => $programa->exig_p_g,     'unidade' => 'g'],
+            $visual = [
+                'ok'    => ['texto' => '✓ Atendido', 'classe' => 'badge-ok',    'cor' => '#2D6A4F'],
+                'baixo' => ['texto' => '↓ Abaixo',   'classe' => 'badge-baixo', 'cor' => '#FA5252'],
+                'alto'  => ['texto' => '↑ Acima',    'classe' => 'badge-alto',  'cor' => '#FAB005'],
             ];
         @endphp
 
-        @foreach($itens as $item)
-            @php
-                $status = statusBalanco($item['forn'], $item['exig']);
-                $cor = corBalanco($status);
-                $pct = $item['exig'] > 0 ? min(($item['forn'] / $item['exig']) * 100, 100) : 0;
-                $label = match($status) { 'ok' => '✓ Atendido', 'baixo' => '↓ Abaixo', 'alto' => '↑ Acima' };
-                $badgeClass = match($status) { 'ok' => 'badge-ok', 'baixo' => 'badge-baixo', 'alto' => 'badge-alto' };
-            @endphp
+        @foreach($indicadores['balanco'] as $item)
+            @php $v = $visual[$item['status']]; @endphp
             <div class="balanco-item">
                 <div class="balanco-header">
                     <span class="balanco-label">{{ $item['label'] }}</span>
-                    <span class="balanco-badge {{ $badgeClass }}">{{ $label }}</span>
+                    <span class="balanco-badge {{ $v['classe'] }}">{{ $v['texto'] }}</span>
                 </div>
                 <div class="balanco-bar">
-                    <div class="balanco-fill" style="width: {{ $pct }}%; background: {{ $cor }};"></div>
+                    <div class="balanco-fill" style="width: {{ $item['barra_pct'] }}%; background: {{ $v['cor'] }};"></div>
                 </div>
                 <div class="balanco-valores">
-                    {{ number_format($item['forn'], 2, ',', '.') }} {{ $item['unidade'] }} / {{ number_format($item['exig'], 2, ',', '.') }} {{ $item['unidade'] }}
+                    {{ $kg($item['fornecido']) }} {{ $item['unidade'] }} / {{ $kg($item['exigido']) }} {{ $item['unidade'] }}
                 </div>
             </div>
         @endforeach
@@ -225,7 +248,7 @@
     </div>
     <div class="footer-sistema">
         Gerado pelo Colchete<br>
-        {{ now()->format('d/m/Y \à\s H:i') }}
+        {{ now(config('colchete.fuso_horario'))->format('d/m/Y \à\s H:i') }}
     </div>
 </div>
 

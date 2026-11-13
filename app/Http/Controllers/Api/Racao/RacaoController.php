@@ -10,6 +10,7 @@ use App\Services\Racao\CalculadoraFormulacao;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
+use App\Services\Racao\IndicadoresFormulacao;
 
 class RacaoController extends Controller
 {
@@ -250,7 +251,8 @@ class RacaoController extends Controller
     }
 
     // ── Gera um PDF ───────────────────────────────────────────────────
-    public function pdf($id)
+    // ── Gera um PDF ───────────────────────────────────────────────────
+    public function pdf($id, IndicadoresFormulacao $indicadores)
     {
         $user = auth()->user();
 
@@ -263,7 +265,10 @@ class RacaoController extends Controller
             ])
             ->findOrFail($id);
 
-        $html = view('pdf.formulacao-racao', compact('programa'))->render();
+        $html = view('pdf.formulacao-racao', [
+            'programa'    => $programa,
+            'indicadores' => $indicadores->calcular($programa),
+        ])->render();
 
         return response()->json([
             'html'     => $html,

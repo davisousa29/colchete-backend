@@ -9,5 +9,5 @@ return [
 
     // Contato de suporte mostrado aos usuários (e-mails, telas)
     'email_suporte' => env('EMAIL_SUPORTE', 'colchete.gestaorural@gmail.com'),
-
+    'fuso_horario' => 'America/Sao_Paulo',
 ];
